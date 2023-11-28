@@ -1,0 +1,50 @@
+version: "3.7" 
+services:
+
+  
+  ### DATABASES ### 
+  db:
+    image: polyus_pg:13.6-alpine3.15
+    build: ./db
+    container_name: polyus_pg
+    restart: always
+    env_file: ./db/.env
+    volumes:
+      - ./db/pgdata:/mnt/share/mydb
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    ports:
+      - 5430:5432
+    
+    networks:
+      polyus:
+        ipv4_address: 3.8.15.2
+
+  app:
+    image: polyus_app:python3.9.7-slim-buster
+    build: ./app
+    container_name: polyus_app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    restart: always
+    env_file: ./app/.env
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ./app/code:/code
+    depends_on:
+      - db
+    ports:
+      - 8778:8000
+    
+    networks:
+      polyus:
+        ipv4_address: 3.8.15.3
+
+
+### NETWORKS ###
+networks:
+  polyus:
+    ipam:
+      driver: default
+      config:
+        - subnet: 3.8.15.0/24
