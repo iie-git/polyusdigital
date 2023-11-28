@@ -47,6 +47,7 @@ class PurchaseRegistry(Base):
     __tablename__ = "purchase_registry"
     id = Column(postgresql.UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
     user_id = Column(postgresql.UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    user_full_name = Column(String(50), nullable = False)
     purchase_date = Column(DateTime(timezone=True), default= dt.utcnow(), nullable=False)
     purchases = relationship(
         'Purchases',
@@ -65,6 +66,9 @@ class Purchases(Base):
     id = Column(postgresql.UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
     registry_id = Column(postgresql.UUID(as_uuid=True),  ForeignKey('purchase_registry.id', ondelete='CASCADE'), nullable=False)
     product_id = Column(postgresql.UUID(as_uuid=True), ForeignKey('products.id', ondelete='CASCADE'), nullable=False)
+    product_name = Column(String(50), nullable = False)
+    selling_cost = Column(Numeric(), nullable = False)
+    total_cost = Column(Numeric(), nullable = False)
     count = Column(Integer(), nullable=False)
 
     registry = relationship(

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic.types import UUID4
 
 
@@ -11,17 +11,14 @@ class PurchaseRegistryBase(BaseModel):
 
 
 class PurchaseRegistryCreate(PurchaseRegistryBase):
-    pass
+    user_full_name: str = Field(..., max_length=50)
 
 
-class PurchaseRegistryUpdate(PurchaseRegistryBase):
-    user_id: Optional[UUID4] = None
-    purchase_date: datetime = datetime.utcnow()
 
 
 class PurchaseRegistryInDBBase(PurchaseRegistryBase):
     id: Optional[UUID4] = None
-    purchase_date: Optional[datetime] = None
+    user_full_name: str = Field(..., max_length=50)
 
     class Config:
         from_attributes = True

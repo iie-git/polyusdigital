@@ -6,22 +6,29 @@ from pydantic.types import UUID4
 
 
 class ProductBase(BaseModel):
+    purchase_cost: Decimal = Field(..., gt=0)
+    selling_cost: Decimal = Field(..., gt=0)
+
+class ProductWithFloatCost(BaseModel):
+
+    purchase_cost: float = Field(..., gt=0)
+    selling_cost: float = Field(..., gt=0)
+
+class ProductNoneUpdate(BaseModel):
     name: str = Field(..., max_length=50)
-    purchase_cost: Decimal
-    selling_cost: Decimal
 
 
-class ProductCreate(ProductBase):
+class ProductCreate(ProductBase, ProductNoneUpdate):
     pass
 
 
 class ProductUpdate(ProductBase):
-    name: str = Field(None, max_length=50)
-    purchase_cost: Union[Decimal, None] = None
-    selling_cost: Union[Decimal, None] = None
+    purchase_cost: Decimal = Field(None, gt=0)
+    selling_cost: Decimal = Field(None, gt=0)
 
 
-class ProductInDBBase(ProductBase):
+
+class ProductInDBBase(ProductWithFloatCost,ProductNoneUpdate):
     id: Optional[UUID4] = None
 
     class Config:

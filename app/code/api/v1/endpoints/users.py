@@ -7,8 +7,11 @@ from pydantic import UUID4
 
 import schemas
 from crud import user as user_crud
+from crud import purchase_registry as registry_crud
 from crud import check_by_id
 from api import deps
+
+from sql.models import PurchaseRegistry
 
 
 router = APIRouter()
@@ -81,6 +84,12 @@ async def delete_user(db: SessionInstance, user_id: UUID4) -> schemas.Msg:
     Удаление пользователя по id.
     """
     user = await check_by_id(db, user_crud, id=user_id, msg="Пользователь с id = %s  не существует")
+    registry_with_user = await registry_crud.get_multi_by_filter(db, filter_list=[(PurchaseRegistry.user_id == user_id)], limit=1)
+    if registry_with_user:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Невозмождно удалить пользователя {user_id}, у которого есть записи о покупках"
+        )
 
     await user_crud.delete(db, model_item=user)
 

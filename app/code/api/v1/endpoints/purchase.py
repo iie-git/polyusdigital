@@ -27,47 +27,43 @@ async def read_purchase(
     """
     Получение списка покупок всех пользователей  со смещением и ограничением.
     """
-    registry = await purchase_crud.get_multi(db, skip=skip, limit=limit)
-    return registry
+    purchase = await purchase_crud.get_multi(db, skip=skip, limit=limit)
+    return purchase
 
 
-@router.get("/by/registry/{registry_id}", response_model=List[schemas.PurchaseWithProductData])
+@router.get("/by/registry/{registry_id}", response_model=List[schemas.PurchaseItem])
 async def read_purchase_by_registry_id(
     db: SessionInstance,
     registry_id: UUID4,
-) -> List[schemas.PurchaseWithProductData]:
+) -> Any:
     """
     Получение списка покупок по записи из реестра  c доп информацией о товаре и стоимости.
     """
-    query = (
-                select(
-                    Purchases.id,
-                    Products.name,
-                    Purchases.count,
-                    Products.selling_cost.label('goods_cost'),
-                    (Purchases.count * Products.selling_cost).label('total_cost')
-                    )
-                .join(Products, Products.id == Purchases.product_id)
-                .filter(Purchases.registry_id == registry_id)
-            )
-    result = await db.execute(query)
-
-    return result.all()
+    await check_by_id(db, purchase_registry_crud, id=registry_id,
+                      msg="Запись в реестре покупок с id = %s  не существует")
+    purchase = await purchase_crud.get_multi_by_filter(db, filter_list=[(Purchases.registry_id == registry_id)])
+    return purchase
 
 
 @router.post("/", response_model=schemas.PurchaseItem)
 async def create_purchase(
     *,
     db: SessionInstance,
-    purchase_in: schemas.PurchaseCreate,
+    purchase_in: schemas.PurchaseBase,
 ) -> Any:
     """
     Создание новой записи в реестре покупупок.
     """
     await check_by_id(db, purchase_registry_crud, id=purchase_in.registry_id,
                 msg="Запись в реестре покупок с id = %s  не существует")
-    await check_by_id(db, product_crud, id=purchase_in.product_id, msg="Продукт с id = %s  не существует")
-    purchase = await purchase_crud.create(db, obj_in=purchase_in)
+    product = await check_by_id(db, product_crud, id=purchase_in.product_id, msg="Продукт с id = %s  не существует")
+    create_purchase_item = schemas.PurchaseCreate(
+                                                    **purchase_in.model_dump(),
+                                                    **{
+                                                        "product_name": product.name,
+                                                        "selling_cost": product.selling_cost,
+                                                    })
+    purchase = await purchase_crud.create(db, obj_in=create_purchase_item)
 
     return purchase
 
@@ -84,28 +80,6 @@ async def read_purchase_by_id(
                                  msg="Покупка с id = %s  не существует")
     return purchase
 
-
-@router.put("/{purchase_id}", response_model=schemas.PurchaseItem)
-async def update_purchase(
-    *,
-    db: SessionInstance,
-    purchase_id: UUID4,
-    purchase_in: schemas.PurchaseUpdate,
-) -> Any:
-    """
-    Обновление данных записи реестра покупок с переданным id.
-    """
-    purchase=await check_by_id(db, purchase_crud, id=purchase_id,
-                msg="Покупка с id = %s  не существует")
-    registry_id_val = purchase_in.dict().get('registry_id')
-    if registry_id_val:
-        await check_by_id(db, purchase_registry_crud, id=registry_id_val,
-                            msg="Запись в реестре покупок с id = %s  не существует")
-    product_id_val = purchase_in.dict().get('product_id')
-    if product_id_val:
-        await check_by_id(db, product_crud, id=product_id_val, msg="Продукт с id = %s  не существует")
-    purchase = await purchase_crud.update(db, db_obj=purchase, obj_in=purchase_in)
-    return purchase
 
 
 @router.delete("/{purchase_id}")

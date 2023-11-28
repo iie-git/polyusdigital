@@ -1,23 +1,12 @@
 from typing import Any, Dict, Union
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from .base import CRUDBase
+from .base import CRUDBase, CRUDUpdate, CRUDDelete
 from sql.models import Products
 from schemas import ProductCreate, ProductUpdate
 
 
-class CRUDProduct(CRUDBase[Products, ProductCreate, ProductUpdate]):
-
-    async def create(self, db: AsyncSession, *, obj_in: ProductCreate) -> Products:
-        db_obj = Products(
-            name=obj_in.name,
-            purchase_cost=obj_in.purchase_cost,
-            selling_cost=obj_in.selling_cost,
-        )
-        db.add(db_obj)
-        await db.commit()
-        await db.refresh(db_obj)
-        return db_obj
+class CRUDProduct(CRUDBase[Products, ProductCreate], CRUDUpdate[ProductUpdate], CRUDDelete):
 
     async def update(
         self, db: AsyncSession, *, db_obj: Products, obj_in: Union[ProductUpdate, Dict[str, Any]]

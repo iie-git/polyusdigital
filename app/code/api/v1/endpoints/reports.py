@@ -1,5 +1,4 @@
 from typing import Any, List, Annotated
-from decimal import Decimal
 from datetime import date
 
 from fastapi import APIRouter, Depends
@@ -16,7 +15,7 @@ SessionInstance = Annotated[AsyncSession, Depends(deps.get_session)]
 
 class ReportUserOrdersCost(BaseModel):
     full_name: str
-    purchases_cost: Decimal
+    purchases_cost: float
 
 
 @router.get("/users/by/purchases_cost", response_model=List[ReportUserOrdersCost])
@@ -27,10 +26,9 @@ async def read_products(
     """
     Получение отчета по пользователям  относительно стоимости их покупок.
     """
-    query = select(Users.full_name, func.sum(Purchases.count*Products.selling_cost).label('purchases_cost'))\
+    query = select(Users.full_name, func.sum(Purchases.total_cost).label('purchases_cost'))\
         .join(PurchaseRegistry, PurchaseRegistry.user_id == Users.id)\
-        .join(Purchases, Purchases.registry_id == PurchaseRegistry.id)\
-        .join(Products, Products.id == Purchases.product_id)
+        .join(Purchases, Purchases.registry_id == PurchaseRegistry.id)
     if purchase_date:
         query=query.filter(cast(PurchaseRegistry.purchase_date,Date) == purchase_date)
     query = query\

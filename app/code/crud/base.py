@@ -11,7 +11,7 @@ CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 
-class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
+class CRUDBase(Generic[ModelType, CreateSchemaType]):
     def __init__(self, model: Type[ModelType]):
         """
         CRUD object with default methods to Create, Read, Update, Delete (CRUD).
@@ -27,7 +27,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         query = select(self.model).filter(self.model.id == id)
         result = await db.execute(query)
-        return result.first()
+        return result.scalars().first()
 
     async def get_multi(
         self, db: AsyncSession, *, skip: int = None, limit: int = None
@@ -40,14 +40,26 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         result = await db.execute(query)
         return result.scalars().all()
 
+    async def get_multi_by_filter(
+            self, db: AsyncSession, *,filter_list: Any = None, skip: int = None, limit: int = None
+    ) -> List[ModelType]:
+        query = select(self.model).filter(*filter_list)
+        if isinstance(skip, int) and skip > 0:
+            query = query.offset(skip)
+        if isinstance(limit, int) and limit > 0:
+            query = query.limit(limit)
+        result = await db.execute(query)
+        return result.scalars().all()
+
     async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
-        obj_in_data = jsonable_encoder(obj_in)
-        db_obj = self.model(**obj_in_data)
+        db_obj = self.model(**obj_in.model_dump())
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
         return db_obj
 
+
+class CRUDUpdate(Generic[UpdateSchemaType]):
     async def update(
         self,
         db: AsyncSession,
@@ -67,6 +79,8 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await db.commit()
         await db.refresh(db_obj)
         return db_obj
+
+class CRUDDelete():
 
     async def delete(self, db: AsyncSession, *, model_item: ModelType) -> bool:
         await db.delete(model_item)

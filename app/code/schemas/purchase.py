@@ -2,7 +2,7 @@
 from typing import Optional
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 from pydantic.types import UUID4
 
 
@@ -11,25 +11,23 @@ class PurchaseBase(BaseModel):
     product_id: UUID4
     count: int = Field(..., gt=0)
 
-class PurchaseWithProductData(BaseModel):
-    id: UUID4
-    name: str
-    count: int
-    goods_cost: Decimal
-    total_cost: Decimal
 
 class PurchaseCreate(PurchaseBase):
-    pass
+    selling_cost: Decimal
+    product_name: str = Field(..., max_length=50)
 
-
-class PurchaseUpdate(PurchaseBase):
-    registry_id: Optional[UUID4] = None
-    product_id: Optional[UUID4] = None
-    count: int = Field(None, gt=0)
+    @computed_field
+    @property
+    def total_cost(self) -> Decimal:
+        return self.selling_cost * self.count
 
 
 class PurchaseInDBBase(PurchaseBase):
     id: Optional[UUID4] = None
+    selling_cost: float
+    product_name: str = Field(..., max_length=50)
+    total_cost: float
+
 
     class Config:
         from_attributes = True

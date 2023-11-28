@@ -3,10 +3,12 @@ from typing import Any, List, Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from pydantic import UUID4
 import crud
 import schemas
 from api import deps
-from pydantic import UUID4
+
+from sql.models import Purchases
 
 router = APIRouter()
 
@@ -77,6 +79,13 @@ async def delete_product(db: SessionInstance, product_id: UUID4) -> schemas.Msg:
     """
     product = await crud.check_by_id(db, crud.product, id=product_id,
                                      msg="Продукт с id = %s  не существует")
-
+    purchase_with_product = await crud.purchase.get_multi_by_filter(db,
+                                                                 filter_list=[(Purchases.product_id == product_id)],
+                                                                 limit=1)
+    if purchase_with_product:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Невозмождно удалить продукт {product_id}, который имеется в покупках"
+        )
     await crud.product.delete(db, model_item=product)
     return schemas.Msg(msg=f"Продукт с id = {product_id} удален")
