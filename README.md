@@ -16,4 +16,4 @@
 2. docker-compose up -d
 3. docker exec -ti polyus_app bash
 4. python create_db.py
-5. Проверить что сервер  [http://localhost:8778/docs](http://localhost:8778/docs) 
+5. Проверить что сервер запущен [http://localhost:8778/docs](http://localhost:8778/docs) 
